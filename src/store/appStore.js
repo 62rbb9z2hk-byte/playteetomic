@@ -146,7 +146,7 @@ export const useDataStore = create(
             api.getLikedPosts(userId),
             api.getNotifications(userId),
           ])
-          set({ scorecards, likedPosts: likedPostIds, notifications })
+          set({ scorecards, likedPosts: likedPostIds.map(id => `${id}_${userId}`), notifications })
         } catch (err) {
           console.warn('User data load failed:', err.message)
         }
@@ -199,11 +199,33 @@ export const useDataStore = create(
       getMatch: (id) => get().matches.find(m => m.id === id),
 
       // POSTS
+      deletePost: async (postId) => {
+        if (SUPABASE_READY) {
+          try { await api.deletePost(postId) } catch (err) {
+            get().toast(err.message, 'error'); return
+          }
+        }
+        set(s => ({ posts: s.posts.filter(p => p.id !== postId) }))
+      },
+
+      patchPostComments: (postId, delta) => {
+        set(s => ({ posts: s.posts.map(p => p.id === postId ? { ...p, comments: (p.comments || 0) + delta } : p) }))
+      },
+
+      refreshNotifications: async () => {
+        const { user } = useAuthStore.getState()
+        if (!SUPABASE_READY || !user) return
+        try {
+          const notifications = await api.getNotifications(user.id)
+          set({ notifications })
+        } catch {}
+      },
+
       createPost: async (postData) => {
         if (SUPABASE_READY) {
           try {
             const p = await api.createPost(postData)
-            const post = { id: p.id, userId: p.user_id, text: p.text, imageGradient: p.image_gradient, likes: 0, comments: 0, scorecard: p.scorecard, createdAt: p.created_at }
+            const post = { id: p.id, userId: p.user_id, text: p.text, imageGradient: p.image_gradient, likes: 0, comments: 0, scorecard: p.scorecard, photos: p.photos || [], createdAt: p.created_at, author: useAuthStore.getState().user }
             set(s => ({ posts: [post, ...s.posts] }))
             return post
           } catch (err) {

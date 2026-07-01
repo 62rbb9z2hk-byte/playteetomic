@@ -1,10 +1,13 @@
+import { useEffect } from 'react'
 import { Bell, Check } from 'lucide-react'
 import { useDataStore } from '../../store/appStore'
 import { formatRelative } from '../../lib/utils'
 import Avatar from '../../components/ui/Avatar'
 
 export default function Notifications() {
-  const { notifications, markAllRead, getUser } = useDataStore()
+  const { notifications, markAllRead, getUser, refreshNotifications } = useDataStore()
+
+  useEffect(() => { refreshNotifications() }, [])
 
   return (
     <div className="max-w-lg mx-auto px-4 pt-6 pb-8">

@@ -133,6 +133,36 @@ function normalizeMatch(m) {
 
 // ── POSTS ───────────────────────────────────────────────────
 
+export async function deletePost(postId) {
+  const { error } = await supabase.from('posts').delete().eq('id', postId)
+  if (error) throw error
+}
+
+export async function getComments(postId) {
+  const { data, error } = await supabase
+    .from('comments')
+    .select('*, profiles(name, initials, color)')
+    .eq('post_id', postId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data.map(c => ({
+    id: c.id, postId: c.post_id, userId: c.user_id,
+    text: c.text, createdAt: c.created_at, author: c.profiles,
+  }))
+}
+
+export async function createComment(postId, userId, text) {
+  const { data, error } = await supabase
+    .from('comments').insert({ post_id: postId, user_id: userId, text }).select().single()
+  if (error) throw error
+  return data
+}
+
+export async function deleteComment(commentId) {
+  const { error } = await supabase.from('comments').delete().eq('id', commentId)
+  if (error) throw error
+}
+
 export async function getPosts() {
   const { data, error } = await supabase
     .from('posts').select('*, profiles(name, initials, color)')
@@ -141,7 +171,7 @@ export async function getPosts() {
   return data.map(p => ({
     id: p.id, userId: p.user_id, text: p.text,
     imageGradient: p.image_gradient, likes: p.likes, comments: p.comments,
-    scorecard: p.scorecard, createdAt: p.created_at,
+    scorecard: p.scorecard, photos: p.photos || [], createdAt: p.created_at,
     author: p.profiles,
   }))
 }
