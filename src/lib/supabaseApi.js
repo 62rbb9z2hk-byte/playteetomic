@@ -209,15 +209,16 @@ export async function getLikedPosts(userId) {
 // ── SCORECARDS ───────────────────────────────────────────────
 
 export async function saveScorecard(sc) {
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sc.fieldId || '')
   const { data, error } = await supabase.from('scorecards').insert({
     user_id: sc.userId,
-    field_id: sc.fieldId || null,
+    field_id: isUUID ? sc.fieldId : null,
     field_name: sc.fieldName,
     date: sc.date?.split('T')[0] || new Date().toISOString().split('T')[0],
-    scores: sc.scores,
-    pars: sc.pars,
-    gross: sc.gross,
-    stableford: sc.stableford,
+    scores: (sc.scores || []).map(s => (s === null || s === undefined) ? 0 : Number(s)),
+    pars: sc.pars || [],
+    gross: sc.gross || 0,
+    stableford: sc.stableford || 0,
   }).select().single()
   if (error) throw error
   return data
