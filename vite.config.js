@@ -19,7 +19,7 @@ export default defineConfig({
         orientation: 'portrait-primary',
         lang: 'es',
         icons: [
-          { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' },
+          { src: '/icon.png', sizes: '1024x1024', type: 'image/png', purpose: 'any maskable' },
         ],
         shortcuts: [
           { name: 'Feed',      url: '/app/feed',      description: 'Ver el feed social' },
