@@ -14,6 +14,7 @@ export default function Scorecard() {
   const [fieldId, setFieldId] = useState(fields[0]?.id || '')
   const [scores, setScores] = useState(Array(18).fill(''))
   const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
 
   if (!user) return (
     <div className="flex items-center justify-center min-h-screen">
@@ -35,20 +36,28 @@ export default function Scorecard() {
     return total + stablefordPoints(s, PARS[i], allowance)
   }, 0)
 
-  const handleSave = () => {
-    const field = fields.find(f => f.id === fieldId)
-    saveScorecard({
-      userId: user.id,
-      fieldId,
-      fieldName: field?.name,
-      date: new Date().toISOString(),
-      scores: validScores,
-      pars: PARS,
-      gross,
-      stableford,
-    })
-    toast('¡Scorecard guardada!')
-    setSaved(true)
+  const handleSave = async () => {
+    if (saving || !gross) return
+    setSaving(true)
+    try {
+      const field = fields.find(f => f.id === fieldId)
+      await saveScorecard({
+        userId: user.id,
+        fieldId,
+        fieldName: field?.name || 'Campo',
+        date: new Date().toISOString(),
+        scores: validScores,
+        pars: PARS,
+        gross,
+        stableford,
+      })
+      toast('¡Scorecard guardada!')
+      setSaved(true)
+    } catch (err) {
+      toast(err.message || 'Error al guardar la scorecard', 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleReset = () => { setScores(Array(18).fill('')); setSaved(false) }
@@ -98,18 +107,18 @@ export default function Scorecard() {
               <>
                 {HOLES.slice(offset, offset + 9).map((hole, i) => {
                   const idx = offset + i
-                  const par = PARS[idx]
+                  const holePar = PARS[idx]
                   const s = scores[idx] === '' ? null : Number(scores[idx])
-                  const diff = s ? s - par : null
-                  const allowance = Math.round(par * (user.handicap / 72))
-                  const pts = s ? stablefordPoints(s, par, allowance) : null
-                  const rowCls = diff !== null
-                    ? diff <= -2 ? 'bg-yellow-400/10' : diff === -1 ? 'bg-brand-green/10' : diff === 1 ? 'bg-red-500/10' : diff >= 2 ? 'bg-red-800/20' : ''
+                  const holeDiff = s ? s - holePar : null
+                  const allowance = Math.round(holePar * (user.handicap / 72))
+                  const pts = s ? stablefordPoints(s, holePar, allowance) : null
+                  const rowCls = holeDiff !== null
+                    ? holeDiff <= -2 ? 'bg-yellow-400/10' : holeDiff === -1 ? 'bg-brand-green/10' : holeDiff === 1 ? 'bg-red-500/10' : holeDiff >= 2 ? 'bg-red-800/20' : ''
                     : ''
                   return (
                     <tr key={hole} className={`border-t border-brand-deep/30 ${rowCls}`}>
                       <td className="py-1.5 font-mono text-brand-muted text-xs">{hole}</td>
-                      <td className="py-1.5 font-mono text-center text-brand-muted">{par}</td>
+                      <td className="py-1.5 font-mono text-center text-brand-muted">{holePar}</td>
                       <td className="py-1">
                         <input
                           type="number" min={1} max={15}
@@ -121,7 +130,7 @@ export default function Scorecard() {
                             setSaved(false)
                           }}
                           className="w-16 mx-auto block text-center bg-brand-black border border-brand-deep rounded-lg py-1 font-mono text-sm text-brand-cream focus:border-brand-gold outline-none"
-                          placeholder={String(par)}
+                          placeholder={String(holePar)}
                         />
                       </td>
                       <td className={`py-1.5 font-mono text-center text-xs font-bold ${pts >= 3 ? 'text-yellow-400' : pts === 2 ? 'text-brand-green' : 'text-brand-muted'}`}>
@@ -148,8 +157,13 @@ export default function Scorecard() {
         <button onClick={handleReset} className="btn-outline flex items-center gap-2">
           <RotateCcw className="w-4 h-4" /> Reset
         </button>
-        <button onClick={handleSave} disabled={saved || !gross} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${saved ? 'bg-brand-green/20 border border-brand-green/30 text-brand-green' : 'btn-gold'}`}>
-          <Save className="w-4 h-4" /> {saved ? '¡Guardado!' : 'Guardar scorecard'}
+        <button
+          onClick={handleSave}
+          disabled={saved || !gross || saving}
+          className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl font-bold text-sm transition-all ${saved ? 'bg-brand-green/20 border border-brand-green/30 text-brand-green' : 'btn-gold'}`}
+        >
+          <Save className="w-4 h-4" />
+          {saving ? 'Guardando...' : saved ? '¡Guardado!' : 'Guardar scorecard'}
         </button>
       </div>
     </div>

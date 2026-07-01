@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ChevronRight, ChevronLeft } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Shield, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '../../store/appStore'
 
-const STEPS = ['Cuenta', 'Perfil', 'Golf']
+const STEPS = ['Cuenta', 'Perfil', 'Golf', 'RFEG']
 
 export default function Register() {
   const navigate = useNavigate()
@@ -13,19 +13,35 @@ export default function Register() {
     name: '', email: '', password: '',
     city: '', bio: '',
     handicap: 18, preferredGame: 'social',
+    rfegLicense: '', rfegFullName: '',
   })
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   const handleNext = async (e) => {
     e.preventDefault()
-    if (step < 2) setStep(s => s + 1)
-    else {
-      const result = await register(form)
-      if (result.success) navigate('/app/feed')
-      else setError(result.error)
+    setError('')
+
+    if (step < STEPS.length - 1) {
+      setStep(s => s + 1)
+      return
     }
+
+    setLoading(true)
+    const result = await register(form)
+    setLoading(false)
+    if (result.success) navigate('/app/feed')
+    else setError(result.error)
+  }
+
+  const handleSkipRFEG = async () => {
+    setLoading(true)
+    const result = await register(form)
+    setLoading(false)
+    if (result.success) navigate('/app/feed')
+    else setError(result.error)
   }
 
   return (
@@ -35,7 +51,7 @@ export default function Register() {
         <h1 className="font-serif text-2xl font-black text-brand-cream">
           PLAY <span className="text-brand-gold">T</span>EE TOMIC
         </h1>
-        <p className="text-brand-muted text-sm">Crea tu cuenta · Paso {step + 1} de 3</p>
+        <p className="text-brand-muted text-sm">Crea tu cuenta · Paso {step + 1} de {STEPS.length}</p>
       </div>
 
       {/* Step pills */}
@@ -47,7 +63,13 @@ export default function Register() {
 
       <div className="w-full max-w-sm">
         <div className="glass rounded-2xl p-8">
-          <h2 className="font-serif text-xl font-bold text-brand-cream mb-6">{STEPS[step]}</h2>
+          <h2 className="font-serif text-xl font-bold text-brand-cream mb-1">{STEPS[step]}</h2>
+          {step === 3 && (
+            <p className="text-sm text-brand-muted mb-5 leading-snug">
+              Conecta tu ficha de la Real Federación Española de Golf para verificar tu handicap oficial y obtener el sello de jugador verificado.
+            </p>
+          )}
+          {step !== 3 && <div className="mb-6" />}
 
           <form onSubmit={handleNext} className="space-y-4">
             {step === 0 && (
@@ -83,11 +105,12 @@ export default function Register() {
             {step === 2 && (
               <>
                 <div>
-                  <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-1.5">Handicap oficial</label>
+                  <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-1.5">Handicap</label>
                   <div className="flex items-center gap-4">
-                    <input type="range" min={-5} max={36} value={form.handicap} onChange={e => set('handicap', Number(e.target.value))} className="flex-1 accent-brand-gold" />
+                    <input type="range" min={-5} max={54} value={form.handicap} onChange={e => set('handicap', Number(e.target.value))} className="flex-1 accent-brand-gold" />
                     <span className="font-mono text-brand-gold font-bold w-10 text-right">{form.handicap > 0 ? '+' : ''}{form.handicap}</span>
                   </div>
+                  <p className="text-xs text-brand-muted mt-1">Podrás verificarlo con la RFEG en el siguiente paso</p>
                 </div>
                 <div>
                   <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-3">Tipo de juego preferido</label>
@@ -103,6 +126,50 @@ export default function Register() {
               </>
             )}
 
+            {step === 3 && (
+              <>
+                {/* Badge preview */}
+                <div className={`flex items-center gap-3 p-4 rounded-xl border transition-all ${form.rfegLicense ? 'border-brand-gold bg-brand-gold/5' : 'border-brand-deep bg-brand-dark'}`}>
+                  {form.rfegLicense ? (
+                    <ShieldCheck className="w-8 h-8 text-brand-gold flex-shrink-0" />
+                  ) : (
+                    <Shield className="w-8 h-8 text-brand-muted flex-shrink-0" />
+                  )}
+                  <div>
+                    <p className={`text-sm font-bold ${form.rfegLicense ? 'text-brand-gold' : 'text-brand-muted'}`}>
+                      {form.rfegLicense ? 'Jugador federado' : 'Sin verificar'}
+                    </p>
+                    <p className="text-xs text-brand-muted">
+                      {form.rfegLicense ? `Licencia ${form.rfegLicense}` : 'Introduce tus datos de federado'}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-1.5">Nombre completo (como aparece en la ficha)</label>
+                  <input
+                    value={form.rfegFullName}
+                    onChange={e => set('rfegFullName', e.target.value)}
+                    className="input-base"
+                    placeholder="García López, Carlos"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-1.5">Número de licencia RFEG</label>
+                  <input
+                    value={form.rfegLicense}
+                    onChange={e => set('rfegLicense', e.target.value.toUpperCase())}
+                    className="input-base font-mono"
+                    placeholder="Ej: M-12345-A"
+                  />
+                </div>
+
+                <p className="text-xs text-brand-muted leading-relaxed">
+                  Tu handicap quedará marcado como verificado. Los demás jugadores verán el sello ✓ en tu perfil.
+                </p>
+              </>
+            )}
+
             {error && (
               <div className="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-red-400 text-sm">{error}</div>
             )}
@@ -113,10 +180,21 @@ export default function Register() {
                   <ChevronLeft className="w-4 h-4" /> Atrás
                 </button>
               )}
-              <button type="submit" className="btn-gold flex-1 justify-center flex items-center gap-1">
-                {step < 2 ? <><span>Siguiente</span><ChevronRight className="w-4 h-4" /></> : 'Crear cuenta'}
+              <button type="submit" disabled={loading} className="btn-gold flex-1 justify-center flex items-center gap-1">
+                {loading ? 'Creando cuenta...' : step < STEPS.length - 1 ? <><span>Siguiente</span><ChevronRight className="w-4 h-4" /></> : 'Crear cuenta'}
               </button>
             </div>
+
+            {step === 3 && (
+              <button
+                type="button"
+                onClick={handleSkipRFEG}
+                disabled={loading}
+                className="w-full text-center text-sm text-brand-muted hover:text-brand-cream transition-colors py-1"
+              >
+                Omitir por ahora
+              </button>
+            )}
           </form>
         </div>
 

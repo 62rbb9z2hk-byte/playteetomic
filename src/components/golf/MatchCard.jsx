@@ -51,6 +51,11 @@ export default function MatchCard({ match, showJoin = true }) {
         {field?.name || 'Campo desconocido'}
       </h3>
 
+      {/* Description */}
+      {match.description && (
+        <p className="text-sm text-brand-cream/70 leading-snug mb-3 line-clamp-2">{match.description}</p>
+      )}
+
       {/* Meta */}
       <div className="flex flex-col gap-1 mb-4">
         <div className="flex items-center gap-1.5 text-sm text-brand-muted">

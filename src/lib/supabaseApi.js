@@ -227,7 +227,16 @@ export async function getScorecards(userId) {
   const { data, error } = await supabase.from('scorecards')
     .select('*').eq('user_id', userId).order('created_at', { ascending: false })
   if (error) throw error
-  return data
+  return data.map(normalizeScorecard)
+}
+
+function normalizeScorecard(sc) {
+  return {
+    id: sc.id, userId: sc.user_id, fieldId: sc.field_id,
+    fieldName: sc.field_name, date: sc.date,
+    scores: sc.scores, pars: sc.pars, gross: sc.gross,
+    stableford: sc.stableford, createdAt: sc.created_at,
+  }
 }
 
 // ── NOTIFICATIONS ────────────────────────────────────────────

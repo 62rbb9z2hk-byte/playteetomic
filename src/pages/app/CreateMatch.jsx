@@ -7,6 +7,7 @@ export default function CreateMatch() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
   const { fields, createMatch, toast } = useDataStore()
+  const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     fieldId: fields[0]?.id || '',
     date: '',
@@ -14,16 +15,24 @@ export default function CreateMatch() {
     maxPlayers: 4,
     hcpMin: 0,
     hcpMax: 36,
+    description: '',
   })
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!user) { navigate('/login'); return }
-    const match = createMatch({ ...form, creatorId: user.id })
-    toast('¡Partida creada!')
-    navigate(`/app/partidas/${match.id}`)
+    setLoading(true)
+    try {
+      const match = await createMatch({ ...form, creatorId: user.id })
+      toast('¡Partida creada!')
+      navigate(`/app/partidas/${match.id}`)
+    } catch (err) {
+      toast(err.message || 'Error al crear la partida', 'error')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -52,7 +61,11 @@ export default function CreateMatch() {
         <div>
           <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-3">Tipo de partida</label>
           <div className="grid grid-cols-3 gap-3">
-            {[['social', '🤝', 'Social', 'Informal, para pasar un buen rato'], ['competitive', '🏆', 'Competición', 'Puntuación oficial y seria'], ['open', '🌿', 'Abierto', 'Todo el mundo es bienvenido']].map(([v, em, l, desc]) => (
+            {[
+              ['social', '🤝', 'Social', 'Informal, para pasar un buen rato'],
+              ['competitive', '🏆', 'Competición', 'Puntuación oficial y seria'],
+              ['open', '🌿', 'Abierto', 'Todo el mundo es bienvenido'],
+            ].map(([v, em, l, desc]) => (
               <button type="button" key={v} onClick={() => set('type', v)}
                 className={`flex flex-col items-start gap-1 p-4 rounded-xl border text-left transition-all ${form.type === v ? 'border-brand-gold bg-brand-gold/10' : 'border-brand-deep hover:border-brand-muted bg-brand-dark'}`}>
                 <span className="text-2xl">{em}</span>
@@ -83,7 +96,23 @@ export default function CreateMatch() {
           </div>
         </div>
 
-        <button type="submit" className="btn-gold w-full justify-center py-3">Crear partida</button>
+        {/* Descripción */}
+        <div>
+          <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-1.5">Presentación (opcional)</label>
+          <textarea
+            value={form.description}
+            onChange={e => set('description', e.target.value)}
+            rows={4}
+            maxLength={400}
+            className="input-base resize-none w-full"
+            placeholder={`Ej: Hola, soy Tony, vivo en Madrid y busco compañeros para jugar este fin de semana. Soy hcp 12, bastante tranquilo y siempre dispuesto a tomar una cerveza después 🍺`}
+          />
+          <p className="text-right text-xs text-brand-muted mt-1">{form.description.length}/400</p>
+        </div>
+
+        <button type="submit" disabled={loading} className="btn-gold w-full justify-center py-3">
+          {loading ? 'Creando...' : 'Crear partida'}
+        </button>
       </form>
     </div>
   )

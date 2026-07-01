@@ -74,6 +74,7 @@ export const useAuthStore = create(
             handicap: parseFloat(data.handicap) || 36,
             initials: data.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
             username: data.email.split('@')[0],
+            rfeg_license: data.rfegLicense || null,
           })
           set({ user: { ...profile, email: authUser.email }, isLoggedIn: true, loading: false })
           return { success: true }
@@ -260,7 +261,13 @@ export const useDataStore = create(
       saveScorecard: async (data) => {
         if (SUPABASE_READY) {
           try {
-            const sc = await api.saveScorecard(data)
+            const raw = await api.saveScorecard(data)
+            const sc = {
+              id: raw.id, userId: raw.user_id, fieldId: raw.field_id,
+              fieldName: raw.field_name, date: raw.date,
+              scores: raw.scores, pars: raw.pars, gross: raw.gross,
+              stableford: raw.stableford, createdAt: raw.created_at,
+            }
             set(s => ({ scorecards: [sc, ...s.scorecards] }))
             return sc
           } catch (err) {

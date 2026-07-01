@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Edit2, Save, LogOut } from 'lucide-react'
+import { Edit2, Save, LogOut, ShieldCheck } from 'lucide-react'
 import { useAuthStore, useDataStore } from '../../store/appStore'
 import Avatar from '../../components/ui/Avatar'
 import HandicapBadge from '../../components/ui/HandicapBadge'
@@ -57,7 +57,14 @@ export default function MyProfile() {
             ) : (
               <h2 className="font-serif text-xl font-bold text-brand-cream mb-1">{user.name}</h2>
             )}
-            <HandicapBadge hcp={user.handicap} size="md" />
+            <div className="flex items-center gap-2 flex-wrap mt-0.5">
+              <HandicapBadge hcp={user.handicap} size="md" />
+              {user.rfeg_license && (
+                <span className="flex items-center gap-1 bg-brand-gold/10 border border-brand-gold/30 text-brand-gold text-xs font-semibold px-2 py-0.5 rounded-lg">
+                  <ShieldCheck className="w-3 h-3" /> RFEG verificado
+                </span>
+              )}
+            </div>
             {editing ? (
               <input value={form.city} onChange={e => setForm(f => ({ ...f, city: e.target.value }))} className="input-base text-sm mt-2 w-full" placeholder="Ciudad" />
             ) : (

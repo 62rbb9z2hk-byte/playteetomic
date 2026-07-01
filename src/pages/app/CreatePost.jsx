@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, Image, Camera, X, ListChecks } from 'lucide-react'
+import { ChevronLeft, Image, Camera, X, ListChecks, Check } from 'lucide-react'
 import { useAuthStore, useDataStore } from '../../store/appStore'
 import { supabase } from '../../lib/supabase'
 
@@ -24,17 +24,21 @@ async function uploadPhoto(file, userId) {
 export default function CreatePost() {
   const navigate = useNavigate()
   const { user } = useAuthStore()
-  const { createPost, toast } = useDataStore()
+  const { createPost, toast, scorecards } = useDataStore()
   const fileRef = useRef()
 
   const [text, setText] = useState('')
   const [gradient, setGradient] = useState(GRADIENTS[0])
   const [photos, setPhotos] = useState([])
-  const [showScorecard, setShowScorecard] = useState(false)
+  // scorecard mode: 'none' | 'pick' | 'manual'
+  const [scorecardMode, setScorecardMode] = useState('none')
+  const [pickedCard, setPickedCard] = useState(null)
   const [scores, setScores] = useState(Array(18).fill(''))
   const [loading, setLoading] = useState(false)
 
   if (!user) { navigate('/login'); return null }
+
+  const myCards = scorecards.filter(s => s.userId === user.id)
 
   const addPhotos = (e) => {
     const files = Array.from(e.target.files).slice(0, 3 - photos.length)
@@ -50,7 +54,17 @@ export default function CreatePost() {
     setScores(s => { const n = [...s]; n[i] = v === '' ? '' : String(v); return n })
   }
 
-  const gross = scores.reduce((a, s) => a + (Number(s) || 0), 0)
+  const manualGross = scores.reduce((a, s) => a + (Number(s) || 0), 0)
+
+  const buildScorecard = () => {
+    if (scorecardMode === 'pick' && pickedCard) {
+      return { scores: pickedCard.scores, gross: pickedCard.gross, holes: 18, fieldName: pickedCard.fieldName }
+    }
+    if (scorecardMode === 'manual' && manualGross > 0) {
+      return { scores: scores.map(Number), gross: manualGross, holes: 18 }
+    }
+    return null
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -59,19 +73,12 @@ export default function CreatePost() {
     try {
       let photoUrls = []
       for (const p of photos) {
-        try {
-          const url = await uploadPhoto(p.file, user.id)
-          photoUrls.push(url)
-        } catch {
-          // Storage not configured — skip photos silently
-        }
+        try { photoUrls.push(await uploadPhoto(p.file, user.id)) } catch {}
       }
-
-      const scorecard = showScorecard && gross > 0
-        ? { scores: scores.map(Number), gross, holes: 18 }
-        : null
-
-      await createPost({ userId: user.id, text, imageGradient: gradient, photos: photoUrls, scorecard })
+      await createPost({
+        userId: user.id, text, imageGradient: gradient,
+        photos: photoUrls, scorecard: buildScorecard(),
+      })
       toast('¡Post publicado!')
       navigate('/app/feed')
     } catch (err) {
@@ -105,7 +112,7 @@ export default function CreatePost() {
         {/* Photos */}
         <div>
           <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-3 flex items-center gap-2">
-            <Camera className="w-3.5 h-3.5" /> Fotos del campo <span className="text-brand-deep font-normal normal-case tracking-normal">máx. 3</span>
+            <Camera className="w-3.5 h-3.5" /> Fotos <span className="text-brand-deep font-normal normal-case tracking-normal">máx. 3</span>
           </label>
           <div className="flex gap-2 flex-wrap">
             {photos.map((p, i) => (
@@ -128,9 +135,8 @@ export default function CreatePost() {
           <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={addPhotos} />
         </div>
 
-        {/* Preview */}
         {photos.length === 0 && (
-          <div className={`h-28 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+          <div className={`h-24 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
             <span className="text-white/40 text-sm">Vista previa</span>
           </div>
         )}
@@ -147,52 +153,99 @@ export default function CreatePost() {
           <p className="text-right text-xs text-brand-muted mt-1">{text.length}/280</p>
         </div>
 
-        {/* Scorecard toggle */}
+        {/* Scorecard section */}
         <div>
-          <button type="button" onClick={() => setShowScorecard(s => !s)}
-            className={`flex items-center gap-2 text-sm font-semibold transition-colors ${showScorecard ? 'text-brand-gold' : 'text-brand-muted hover:text-brand-cream'}`}>
-            <ListChecks className="w-4 h-4" />
-            {showScorecard ? 'Ocultar scorecard' : 'Añadir scorecard de la ronda'}
-          </button>
-        </div>
+          <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-3 flex items-center gap-2">
+            <ListChecks className="w-3.5 h-3.5" /> Scorecard (opcional)
+          </label>
 
-        {/* Scorecard mini grid */}
-        {showScorecard && (
-          <div className="bg-brand-dark border border-brand-deep rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-semibold text-brand-muted uppercase tracking-widest">Golpes por hoyo</p>
-              {gross > 0 && <span className="font-mono text-brand-gold font-bold text-sm">Total: {gross}</span>}
-            </div>
-            {/* Holes 1-9 */}
-            <div className="mb-3">
-              <p className="text-xs text-brand-muted mb-2">Hoyos 1–9</p>
-              <div className="grid grid-cols-9 gap-1">
-                {HOLES_18.slice(0, 9).map((h, i) => (
-                  <div key={h} className="flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] text-brand-muted">{h}</span>
-                    <input type="number" min="1" max="15" value={scores[i]}
-                      onChange={e => setScore(i, e.target.value)}
-                      className="w-full h-8 rounded-lg bg-brand-black border border-brand-deep text-center text-sm text-brand-cream font-mono focus:border-brand-gold focus:outline-none" />
-                  </div>
-                ))}
-              </div>
-            </div>
-            {/* Holes 10-18 */}
-            <div>
-              <p className="text-xs text-brand-muted mb-2">Hoyos 10–18</p>
-              <div className="grid grid-cols-9 gap-1">
-                {HOLES_18.slice(9).map((h, i) => (
-                  <div key={h} className="flex flex-col items-center gap-0.5">
-                    <span className="text-[9px] text-brand-muted">{h}</span>
-                    <input type="number" min="1" max="15" value={scores[i + 9]}
-                      onChange={e => setScore(i + 9, e.target.value)}
-                      className="w-full h-8 rounded-lg bg-brand-black border border-brand-deep text-center text-sm text-brand-cream font-mono focus:border-brand-gold focus:outline-none" />
-                  </div>
-                ))}
-              </div>
-            </div>
+          {/* Mode selector */}
+          <div className="flex gap-2">
+            <button type="button"
+              onClick={() => { setScorecardMode(scorecardMode === 'none' ? 'pick' : 'none'); setPickedCard(null) }}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${scorecardMode !== 'none' ? 'border-brand-gold bg-brand-gold/10 text-brand-gold' : 'border-brand-deep text-brand-muted hover:border-brand-muted'}`}>
+              {myCards.length > 0 ? 'Elegir scorecard guardado' : 'No hay scorecards'}
+            </button>
+            <button type="button"
+              onClick={() => { setScorecardMode(scorecardMode === 'manual' ? 'none' : 'manual'); setPickedCard(null) }}
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${scorecardMode === 'manual' ? 'border-brand-gold bg-brand-gold/10 text-brand-gold' : 'border-brand-deep text-brand-muted hover:border-brand-muted'}`}>
+              Introducir manualmente
+            </button>
           </div>
-        )}
+
+          {/* Picker: existing scorecards */}
+          {scorecardMode === 'pick' && myCards.length > 0 && (
+            <div className="flex gap-3 overflow-x-auto py-3 -mx-1 px-1">
+              {myCards.map(card => (
+                <button type="button" key={card.id}
+                  onClick={() => setPickedCard(pickedCard?.id === card.id ? null : card)}
+                  className={`flex-shrink-0 w-40 p-3 rounded-xl border text-left transition-all ${pickedCard?.id === card.id ? 'border-brand-gold bg-brand-gold/10' : 'border-brand-deep hover:border-brand-muted bg-brand-dark'}`}>
+                  <div className="flex items-start justify-between gap-1">
+                    <p className="text-sm font-semibold text-brand-cream truncate flex-1">{card.fieldName || 'Campo'}</p>
+                    {pickedCard?.id === card.id && <Check className="w-3.5 h-3.5 text-brand-gold flex-shrink-0 mt-0.5" />}
+                  </div>
+                  <p className="text-xs text-brand-muted mt-0.5">
+                    {card.date ? new Date(card.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : ''}
+                  </p>
+                  <p className="font-mono text-brand-gold font-bold text-lg mt-1.5">
+                    {card.gross} <span className="text-xs font-normal text-brand-muted">golpes</span>
+                  </p>
+                  {card.stableford != null && (
+                    <p className="text-xs text-brand-muted">{card.stableford} pts Stbl</p>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {scorecardMode === 'pick' && myCards.length === 0 && (
+            <p className="text-sm text-brand-muted mt-3 text-center">
+              Aún no tienes scorecards guardadas. <button type="button" onClick={() => setScorecardMode('manual')} className="text-brand-gold underline">Introducir manualmente</button>
+            </p>
+          )}
+
+          {/* Selected card preview */}
+          {pickedCard && (
+            <div className="mt-3 bg-brand-black/50 rounded-xl p-3 border border-brand-gold/30">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-semibold text-brand-gold">{pickedCard.fieldName}</span>
+                <span className="font-mono font-bold text-brand-cream text-sm">{pickedCard.gross} golpes</span>
+              </div>
+              {pickedCard.scores && (
+                <div className="flex gap-1 flex-wrap">
+                  {pickedCard.scores.slice(0, 18).map((s, i) => (
+                    <div key={i} className="w-6 h-6 rounded bg-brand-dark border border-brand-deep flex items-center justify-center font-mono text-[10px] text-brand-cream">{s || '—'}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Manual entry grid */}
+          {scorecardMode === 'manual' && (
+            <div className="mt-3 bg-brand-dark border border-brand-deep rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-semibold text-brand-muted uppercase tracking-widest">Golpes por hoyo</p>
+                {manualGross > 0 && <span className="font-mono text-brand-gold font-bold text-sm">Total: {manualGross}</span>}
+              </div>
+              {[0, 9].map(offset => (
+                <div key={offset} className={offset > 0 ? 'mt-3' : ''}>
+                  <p className="text-xs text-brand-muted mb-2">Hoyos {offset + 1}–{offset + 9}</p>
+                  <div className="grid grid-cols-9 gap-1">
+                    {HOLES_18.slice(offset, offset + 9).map((h, i) => (
+                      <div key={h} className="flex flex-col items-center gap-0.5">
+                        <span className="text-[9px] text-brand-muted">{h}</span>
+                        <input type="number" min="1" max="15" value={scores[offset + i]}
+                          onChange={e => setScore(offset + i, e.target.value)}
+                          className="w-full h-8 rounded-lg bg-brand-black border border-brand-deep text-center text-sm text-brand-cream font-mono focus:border-brand-gold focus:outline-none" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <button type="submit" disabled={!text.trim() || loading} className="btn-gold w-full justify-center py-3">
           {loading ? 'Publicando...' : 'Publicar'}
