@@ -153,6 +153,7 @@ export async function createPost(postData) {
       text: postData.text,
       image_gradient: postData.imageGradient,
       scorecard: postData.scorecard || null,
+      photos: postData.photos || [],
     }).select().single()
   if (error) throw error
   return data

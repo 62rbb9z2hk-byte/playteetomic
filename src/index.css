@@ -118,8 +118,9 @@
   .text-shadow-sm { text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  /* iOS safe area bottom padding for fixed nav */
+  /* iOS safe area padding */
   .safe-bottom { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+  .safe-top { padding-top: env(safe-area-inset-top); }
   /* Pulse dot for live indicators */
   .live-dot::before {
     content: '';

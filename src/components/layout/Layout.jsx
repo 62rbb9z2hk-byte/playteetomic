@@ -15,7 +15,7 @@ export default function Layout() {
       </div>
 
       {/* Main content */}
-      <main className={`transition-all duration-300 ${collapsed ? 'md:ml-16' : 'md:ml-60'} pb-20 md:pb-0 min-h-screen`}>
+      <main className={`transition-all duration-300 ${collapsed ? 'md:ml-16' : 'md:ml-60'} pb-20 md:pb-0 min-h-screen safe-top`}>
         <Outlet />
       </main>
 
