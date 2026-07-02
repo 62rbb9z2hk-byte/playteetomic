@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ChevronRight, ChevronLeft, Shield, ShieldCheck } from 'lucide-react'
 import { useAuthStore } from '../../store/appStore'
+import { MUNICIPALITIES } from '../../lib/municipalities'
 
 const STEPS = ['Cuenta', 'Perfil', 'Golf', 'RFEG']
 
@@ -11,7 +12,7 @@ export default function Register() {
   const [step, setStep] = useState(0)
   const [form, setForm] = useState({
     name: '', email: '', password: '',
-    city: '', bio: '',
+    city: '', municipality: '', bio: '',
     handicap: 18, preferredGame: 'social',
     rfegLicense: '', rfegFullName: '',
   })
@@ -92,7 +93,24 @@ export default function Register() {
             {step === 1 && (
               <>
                 <div>
-                  <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-1.5">Ciudad</label>
+                  <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-1.5">Municipio</label>
+                  <select
+                    value={form.municipality}
+                    onChange={e => {
+                      const m = MUNICIPALITIES.find(x => x.name === e.target.value)
+                      set('municipality', e.target.value)
+                      if (m) set('city', m.province)
+                    }}
+                    className="input-base"
+                  >
+                    <option value="">Selecciona tu municipio...</option>
+                    {MUNICIPALITIES.map(m => (
+                      <option key={m.name} value={m.name}>{m.name} ({m.province})</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-1.5">Provincia / Ciudad</label>
                   <input value={form.city} onChange={e => set('city', e.target.value)} required className="input-base" placeholder="Madrid" />
                 </div>
                 <div>

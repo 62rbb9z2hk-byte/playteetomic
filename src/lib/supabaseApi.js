@@ -279,3 +279,59 @@ export async function markNotificationsRead(userId) {
     .update({ read: true }).eq('user_id', userId)
   if (error) throw error
 }
+
+// ── MESSAGES ────────────────────────────────────────────────
+
+export async function sendMessage(fromId, toId, text) {
+  const { data, error } = await supabase
+    .from('messages').insert({ from_id: fromId, to_id: toId, text }).select().single()
+  if (error) throw error
+  return normalizeMessage(data)
+}
+
+export async function getMessages(userId, otherUserId) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*')
+    .or(`and(from_id.eq.${userId},to_id.eq.${otherUserId}),and(from_id.eq.${otherUserId},to_id.eq.${userId})`)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data.map(normalizeMessage)
+}
+
+export async function getConversations(userId) {
+  const { data, error } = await supabase
+    .from('messages')
+    .select('*, from_profile:profiles!from_id(name, initials, color, handicap, municipality, city), to_profile:profiles!to_id(name, initials, color, handicap, municipality, city)')
+    .or(`from_id.eq.${userId},to_id.eq.${userId}`)
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  const map = {}
+  data.forEach(m => {
+    const otherId = m.from_id === userId ? m.to_id : m.from_id
+    const otherProfile = m.from_id === userId ? m.to_profile : m.from_profile
+    if (!map[otherId]) {
+      map[otherId] = { id: otherId, otherUser: { id: otherId, ...otherProfile }, lastMessage: m.text, lastMessageAt: m.created_at, unread: 0 }
+    }
+    if (m.to_id === userId && !m.read) map[otherId].unread = (map[otherId].unread || 0) + 1
+  })
+  return Object.values(map)
+}
+
+export async function markMessagesRead(fromId, toId) {
+  const { error } = await supabase.from('messages')
+    .update({ read: true }).eq('from_id', fromId).eq('to_id', toId)
+  if (error) throw error
+}
+
+export function subscribeToMessages(userId, callback) {
+  const channel = supabase.channel(`messages_user_${userId}`)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `to_id=eq.${userId}` },
+      payload => callback(normalizeMessage(payload.new)))
+    .subscribe()
+  return () => supabase.removeChannel(channel)
+}
+
+function normalizeMessage(m) {
+  return { id: m.id, fromId: m.from_id, toId: m.to_id, text: m.text, createdAt: m.created_at, read: m.read }
+}

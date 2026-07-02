@@ -16,6 +16,9 @@ import Scorecard from './pages/app/Scorecard'
 import MyProfile from './pages/app/MyProfile'
 import Notifications from './pages/app/Notifications'
 import CreatePost from './pages/app/CreatePost'
+import MapPage from './pages/app/MapPage'
+import Messages from './pages/app/Messages'
+import Conversation from './pages/app/Conversation'
 
 function AppInit() {
   const { init, user } = useAuthStore()
@@ -76,6 +79,9 @@ export default function App() {
           <Route path="scorecard" element={<Scorecard />} />
           <Route path="perfil" element={<MyProfile />} />
           <Route path="notificaciones" element={<Notifications />} />
+          <Route path="mapa" element={<MapPage />} />
+          <Route path="mensajes" element={<Messages />} />
+          <Route path="mensajes/:userId" element={<Conversation />} />
         </Route>
 
         {/* Fallback */}

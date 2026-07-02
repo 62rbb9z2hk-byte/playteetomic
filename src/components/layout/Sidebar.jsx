@@ -1,23 +1,26 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Home, Flag, Map, User, Bell, Trophy, LogOut, ChevronRight } from 'lucide-react'
+import { Home, Flag, Map, User, Bell, Trophy, LogOut, ChevronRight, MapPin, MessageCircle } from 'lucide-react'
 import { useAuthStore, useDataStore } from '../../store/appStore'
 import Avatar from '../ui/Avatar'
 import HandicapBadge from '../ui/HandicapBadge'
 
 const NAV = [
-  { to: '/app/feed',       icon: Home,   label: 'Inicio' },
-  { to: '/app/partidas',   icon: Flag,   label: 'Partidas' },
-  { to: '/app/campos',     icon: Map,    label: 'Campos' },
-  { to: '/app/scorecard',  icon: Trophy, label: 'Scorecard' },
-  { to: '/app/perfil',     icon: User,   label: 'Mi perfil' },
-  { to: '/app/notificaciones', icon: Bell, label: 'Notificaciones' },
+  { to: '/app/feed',           icon: Home,          label: 'Inicio' },
+  { to: '/app/partidas',       icon: Flag,          label: 'Partidas' },
+  { to: '/app/campos',         icon: Map,           label: 'Campos' },
+  { to: '/app/mapa',           icon: MapPin,        label: 'Mapa' },
+  { to: '/app/mensajes',       icon: MessageCircle, label: 'Mensajes', badge: 'unreadMessages' },
+  { to: '/app/scorecard',      icon: Trophy,        label: 'Scorecard' },
+  { to: '/app/perfil',         icon: User,          label: 'Mi perfil' },
+  { to: '/app/notificaciones', icon: Bell,          label: 'Notificaciones', badge: 'unread' },
 ]
 
 export default function Sidebar({ collapsed, onToggle }) {
   const { user, logout } = useAuthStore()
-  const { unreadCount } = useDataStore()
+  const { unreadCount, unreadMessageCount } = useDataStore()
   const navigate = useNavigate()
   const unread = unreadCount()
+  const unreadMsgs = unreadMessageCount()
 
   const handleLogout = () => { logout(); navigate('/') }
 
@@ -44,16 +47,21 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       {/* Nav */}
       <nav className="flex-1 py-4 overflow-y-auto">
-        {NAV.map(({ to, icon: Icon, label }) => (
+        {NAV.map(({ to, icon: Icon, label, badge }) => (
           <NavLink key={to} to={to}
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all relative ${isActive ? 'nav-active' : 'text-brand-muted hover:text-brand-cream hover:bg-brand-deep/40'}`
             }>
             <div className="relative flex-shrink-0">
               <Icon className="w-5 h-5" />
-              {to === '/app/notificaciones' && unread > 0 && (
+              {badge === 'unread' && unread > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] flex items-center justify-center font-bold text-white">
                   {unread > 9 ? '9+' : unread}
+                </span>
+              )}
+              {badge === 'unreadMessages' && unreadMsgs > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-gold rounded-full text-[10px] flex items-center justify-center font-bold text-brand-black">
+                  {unreadMsgs > 9 ? '9+' : unreadMsgs}
                 </span>
               )}
             </div>

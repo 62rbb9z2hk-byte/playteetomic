@@ -54,6 +54,7 @@ export const useAuthStore = create(
             id: 'u_' + Date.now(),
             name: data.name, username: data.email.split('@')[0],
             email: data.email, city: data.city || 'España',
+            municipality: data.municipality || null,
             handicap: parseFloat(data.handicap) || 36, bio: data.bio || '',
             initials: data.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
             color: 'from-brand-green to-brand-field',
@@ -70,6 +71,7 @@ export const useAuthStore = create(
           const profile = await api.updateProfile(authUser.id, {
             name: data.name,
             city: data.city || 'España',
+            municipality: data.municipality || null,
             bio: data.bio || '',
             handicap: parseFloat(data.handicap) || 36,
             initials: data.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
@@ -121,6 +123,8 @@ export const useDataStore = create(
       notifications: NOTIFICATIONS,
       scorecards: [],
       likedPosts: [],
+      messages: [],
+      conversations: [],
       toasts: [],
       dataLoaded: false,
 
@@ -307,6 +311,81 @@ export const useDataStore = create(
         return sc
       },
 
+      // MESSAGES
+      sendMessage: async ({ fromId, toId, text }) => {
+        const msg = { id: 'msg_' + Date.now(), fromId, toId, text, createdAt: new Date().toISOString(), read: false }
+        if (SUPABASE_READY) {
+          try {
+            const saved = await api.sendMessage(fromId, toId, text)
+            set(s => ({ messages: [...s.messages, saved] }))
+            get()._buildConversations(fromId)
+            return
+          } catch (err) {
+            console.warn('sendMessage failed:', err.message)
+          }
+        }
+        set(s => ({ messages: [...s.messages, msg] }))
+        get()._buildConversations(fromId)
+      },
+
+      loadMessages: async (userId, otherUserId) => {
+        if (!SUPABASE_READY) return
+        try {
+          const msgs = await api.getMessages(userId, otherUserId)
+          set(s => {
+            const rest = s.messages.filter(m =>
+              !((m.fromId === userId && m.toId === otherUserId) ||
+                (m.fromId === otherUserId && m.toId === userId))
+            )
+            return { messages: [...rest, ...msgs] }
+          })
+        } catch (err) {
+          console.warn('loadMessages failed:', err.message)
+        }
+      },
+
+      loadConversations: async (userId) => {
+        if (!SUPABASE_READY) { get()._buildConversations(userId); return }
+        try {
+          const convs = await api.getConversations(userId)
+          set({ conversations: convs })
+        } catch { get()._buildConversations(userId) }
+      },
+
+      _buildConversations: (userId) => {
+        const { messages, users } = get()
+        const map = {}
+        messages.forEach(m => {
+          if (m.fromId !== userId && m.toId !== userId) return
+          const otherId = m.fromId === userId ? m.toId : m.fromId
+          if (!map[otherId] || new Date(m.createdAt) > new Date(map[otherId].lastMessageAt)) {
+            map[otherId] = {
+              id: otherId,
+              otherUser: users.find(u => u.id === otherId),
+              lastMessage: m.text,
+              lastMessageAt: m.createdAt,
+              unread: 0,
+            }
+          }
+          if (m.toId === userId && !m.read) map[otherId].unread = (map[otherId].unread || 0) + 1
+        })
+        set({ conversations: Object.values(map).sort((a, b) => new Date(b.lastMessageAt) - new Date(a.lastMessageAt)) })
+      },
+
+      subscribeToMessages: (userId, callback) => {
+        if (!SUPABASE_READY) return () => {}
+        return api.subscribeToMessages(userId, (msg) => {
+          set(s => ({ messages: [...s.messages.filter(m => m.id !== msg.id), msg] }))
+          if (callback) callback(msg)
+        })
+      },
+
+      unreadMessageCount: () => {
+        const authUser = useAuthStore.getState().user
+        if (!authUser) return 0
+        return get().messages.filter(m => m.toId === authUser.id && !m.read).length
+      },
+
       // NOTIFICATIONS
       markAllRead: async () => {
         const { user } = useAuthStore.getState()
@@ -342,6 +421,7 @@ export const useDataStore = create(
         fields: s.fields,
         matches: s.matches, posts: s.posts,
         scorecards: s.scorecards, likedPosts: s.likedPosts,
+        messages: s.messages,
       }),
     }
   )
