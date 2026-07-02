@@ -1,12 +1,16 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Star, Flag, Waves, MapPin } from 'lucide-react'
+import { ChevronLeft, Star, Flag, Waves, MapPin, X } from 'lucide-react'
 import { useDataStore } from '../../store/appStore'
+
+const DEFAULT_PARS = [4,3,5,4,4,3,5,4,4, 4,3,5,4,4,3,5,4,4]
 
 export default function FieldDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { getField, matches } = useDataStore()
   const field = getField(id)
+  const [photoModal, setPhotoModal] = useState(null)
 
   if (!field) return (
     <div className="flex items-center justify-center min-h-screen text-brand-muted">
@@ -56,6 +60,37 @@ export default function FieldDetail() {
           <span className="text-brand-muted text-sm ml-1">{field.rating?.toFixed(1) || '4.5'} de 5</span>
         </div>
 
+        {/* Hole photo gallery */}
+        {field.holePhotos?.length > 0 && (
+          <div className="mb-6">
+            <h2 className="font-serif font-bold text-brand-cream mb-3">Los 18 hoyos</h2>
+            <div className="grid grid-cols-3 gap-2">
+              {field.holePhotos.slice(0, 18).map((url, i) => {
+                const par = (field.holePars || DEFAULT_PARS)[i] || 4
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setPhotoModal({ url, hole: i + 1, par })}
+                    className="relative rounded-xl overflow-hidden aspect-video bg-brand-deep group"
+                  >
+                    <img
+                      src={url}
+                      alt={`Hoyo ${i + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <div className="absolute bottom-1.5 left-2 right-2 flex items-end justify-between">
+                      <span className="text-white font-bold text-xs leading-none">H{i + 1}</span>
+                      <span className="text-brand-gold font-mono text-[10px] font-bold">P{par}</span>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Upcoming matches */}
         {fieldMatches.length > 0 && (
           <div>
@@ -77,6 +112,35 @@ export default function FieldDetail() {
           </div>
         )}
       </div>
+
+      {/* Photo modal */}
+      {photoModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm"
+          onClick={() => setPhotoModal(null)}
+        >
+          <div className="max-w-lg w-full rounded-2xl overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="relative">
+              <img src={photoModal.url} alt={`Hoyo ${photoModal.hole}`} className="w-full object-cover max-h-72" />
+              <button
+                onClick={() => setPhotoModal(null)}
+                className="absolute top-3 right-3 w-8 h-8 flex items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/80 transition-all"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="bg-brand-dark px-5 py-4 flex items-center justify-between">
+              <div>
+                <p className="font-serif font-bold text-brand-cream text-lg">Hoyo {photoModal.hole}</p>
+                <p className="text-xs text-brand-muted">{field.name}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-mono font-black text-brand-gold text-2xl">Par {photoModal.par}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
