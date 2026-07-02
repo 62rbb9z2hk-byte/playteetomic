@@ -15,6 +15,7 @@ export default function Scorecard() {
   const [scores, setScores] = useState(Array(18).fill(''))
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
   if (!user) return (
     <div className="flex items-center justify-center min-h-screen">
@@ -39,6 +40,7 @@ export default function Scorecard() {
   const handleSave = async () => {
     if (saving || !gross) return
     setSaving(true)
+    setSaveError('')
     try {
       const field = fields.find(f => f.id === fieldId)
       await saveScorecard({
@@ -54,7 +56,9 @@ export default function Scorecard() {
       toast('¡Scorecard guardada!')
       setSaved(true)
     } catch (err) {
-      toast(err.message || 'Error al guardar la scorecard', 'error')
+      const msg = err?.message || JSON.stringify(err) || 'Error desconocido'
+      setSaveError(msg)
+      console.error('Scorecard save error:', err)
     } finally {
       setSaving(false)
     }
@@ -151,6 +155,17 @@ export default function Scorecard() {
           </tbody>
         </table>
       </div>
+
+      {/* Error display */}
+      {saveError && (
+        <div className="mb-4 bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3 text-red-400 text-sm break-all">
+          Error: {saveError}
+        </div>
+      )}
+
+      {!gross && (
+        <p className="text-center text-brand-muted text-sm mb-4">Introduce los golpes de cada hoyo para poder guardar</p>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3">
