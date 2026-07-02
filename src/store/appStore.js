@@ -126,7 +126,8 @@ export const useDataStore = create(
 
       // Load all data from Supabase (call on app boot after auth)
       loadData: async () => {
-        if (!SUPABASE_READY || get().dataLoaded) return
+        if (!SUPABASE_READY) return
+        // fields always reloaded fresh (never cached) so hole_photos stays current
         try {
           const [fields, matches, posts] = await Promise.all([
             api.getFields(),
