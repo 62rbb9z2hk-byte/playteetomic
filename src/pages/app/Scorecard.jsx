@@ -156,13 +156,6 @@ export default function Scorecard() {
         </table>
       </div>
 
-      {/* Error display */}
-      {saveError && (
-        <div className="mb-4 bg-red-500/10 border border-red-500/40 rounded-xl px-4 py-3 text-red-400 text-sm break-all">
-          Error: {saveError}
-        </div>
-      )}
-
       {!gross && (
         <p className="text-center text-brand-muted text-sm mb-4">Introduce los golpes de cada hoyo para poder guardar</p>
       )}
