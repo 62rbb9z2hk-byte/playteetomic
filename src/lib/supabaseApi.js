@@ -67,6 +67,8 @@ function normalizeField(f) {
     holes: f.holes, par: f.par,
     courseRating: f.course_rating, slope: f.slope,
     rating: f.rating, gradient: f.gradient, isPartner: f.is_partner,
+    holePars: f.hole_pars || null,
+    holePhotos: f.hole_photos || null,
   }
 }
 

@@ -6,13 +6,14 @@ import Avatar from '../../components/ui/Avatar'
 import HandicapBadge from '../../components/ui/HandicapBadge'
 import PostCard from '../../components/social/PostCard'
 import MatchCard from '../../components/golf/MatchCard'
+import ScorecardCard from '../../components/golf/ScorecardCard'
 
 const TABS = ['Posts', 'Scorecards', 'Partidas']
 
 export default function MyProfile() {
   const navigate = useNavigate()
   const { user, updateProfile, logout } = useAuthStore()
-  const { matches, scorecards, posts, toast } = useDataStore()
+  const { matches, scorecards, posts, fields, toast } = useDataStore()
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState({ name: user?.name || '', city: user?.city || '', bio: user?.bio || '' })
   const [tab, setTab] = useState('Posts')
@@ -118,27 +119,10 @@ export default function MyProfile() {
         <div className="space-y-3">
           {myCards.length === 0
             ? <p className="text-center text-brand-muted py-10">Aún no tienes scorecards</p>
-            : myCards.map((card, i) => (
-              <div key={i} className="bg-brand-dark border border-brand-deep rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <p className="font-semibold text-brand-cream">{card.fieldName || 'Campo'}</p>
-                    <p className="text-xs text-brand-muted">{card.date ? new Date(card.date).toLocaleDateString('es-ES') : ''}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-mono font-black text-xl text-brand-gold">{card.gross}</p>
-                    <p className="text-xs text-brand-muted">{card.stableford} pts Stableford</p>
-                  </div>
-                </div>
-                {card.scores && (
-                  <div className="flex gap-1 flex-wrap mt-2">
-                    {card.scores.map((s, h) => (
-                      <span key={h} className="w-7 h-7 rounded-lg bg-brand-black border border-brand-deep flex items-center justify-center font-mono text-xs text-brand-cream">{s}</span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
+            : myCards.map((card, i) => {
+                const field = fields.find(f => f.id === card.fieldId)
+                return <ScorecardCard key={card.id || i} card={card} field={field} />
+              })
           }
         </div>
       )}

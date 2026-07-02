@@ -16,6 +16,7 @@ export default function Scorecard() {
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [activeHole, setActiveHole] = useState(null)
 
   if (!user) return (
     <div className="flex items-center justify-center min-h-screen">
@@ -67,6 +68,10 @@ export default function Scorecard() {
   const handleReset = () => { setScores(Array(18).fill('')); setSaved(false) }
 
   const diffClass = diff < 0 ? 'text-brand-green' : diff === 0 ? 'text-brand-muted' : 'text-red-400'
+  const activeField = fields.find(f => f.id === fieldId)
+  const holePars = activeField?.holePars || PARS
+  const holePhotos = activeField?.holePhotos || null
+  const activePhoto = activeHole !== null ? holePhotos?.[activeHole] : null
 
   return (
     <div className="max-w-2xl mx-auto px-4 pt-6 pb-8">
@@ -75,7 +80,7 @@ export default function Scorecard() {
       {/* Campo selector */}
       <div className="mb-6">
         <label className="block text-xs text-brand-muted font-semibold uppercase tracking-widest mb-1.5">Campo</label>
-        <select value={fieldId} onChange={e => { setFieldId(e.target.value); setSaved(false) }} className="input-base max-w-xs">
+        <select value={fieldId} onChange={e => { setFieldId(e.target.value); setSaved(false); setActiveHole(null) }} className="input-base max-w-xs">
           {fields.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
         </select>
       </div>
@@ -95,6 +100,25 @@ export default function Scorecard() {
         ))}
       </div>
 
+      {/* Active hole photo */}
+      {activeHole !== null && (
+        <div className="mb-4 rounded-2xl overflow-hidden border border-brand-deep relative">
+          {activePhoto ? (
+            <img src={activePhoto} alt={`Hoyo ${activeHole + 1}`} className="w-full h-44 object-cover" />
+          ) : (
+            <div className="w-full h-32 bg-gradient-to-br from-brand-field to-brand-deep flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-4xl font-serif font-black text-white/30">{activeHole + 1}</p>
+                <p className="text-xs text-white/30 mt-1">Par {holePars[activeHole]}</p>
+              </div>
+            </div>
+          )}
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+            <p className="text-white font-bold text-sm">Hoyo {activeHole + 1} · Par {holePars[activeHole]}</p>
+          </div>
+        </div>
+      )}
+
       {/* Score grid */}
       <div className="overflow-x-auto mb-6">
         <table className="w-full text-sm border-collapse">
@@ -111,22 +135,24 @@ export default function Scorecard() {
               <>
                 {HOLES.slice(offset, offset + 9).map((hole, i) => {
                   const idx = offset + i
-                  const holePar = PARS[idx]
+                  const holePar = holePars[idx] || PARS[idx]
                   const s = scores[idx] === '' ? null : Number(scores[idx])
                   const holeDiff = s ? s - holePar : null
                   const allowance = Math.round(holePar * (user.handicap / 72))
                   const pts = s ? stablefordPoints(s, holePar, allowance) : null
                   const rowCls = holeDiff !== null
                     ? holeDiff <= -2 ? 'bg-yellow-400/10' : holeDiff === -1 ? 'bg-brand-green/10' : holeDiff === 1 ? 'bg-red-500/10' : holeDiff >= 2 ? 'bg-red-800/20' : ''
-                    : ''
+                    : activeHole === idx ? 'bg-brand-gold/5' : ''
                   return (
-                    <tr key={hole} className={`border-t border-brand-deep/30 ${rowCls}`}>
+                    <tr key={hole} className={`border-t border-brand-deep/30 ${rowCls} cursor-pointer`}
+                        onClick={() => setActiveHole(activeHole === idx ? null : idx)}>
                       <td className="py-1.5 font-mono text-brand-muted text-xs">{hole}</td>
                       <td className="py-1.5 font-mono text-center text-brand-muted">{holePar}</td>
-                      <td className="py-1">
+                      <td className="py-1" onClick={e => e.stopPropagation()}>
                         <input
                           type="number" min={1} max={15}
                           value={scores[idx]}
+                          onFocus={() => setActiveHole(idx)}
                           onChange={e => {
                             const ns = [...scores]
                             ns[idx] = e.target.value
