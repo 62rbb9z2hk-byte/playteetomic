@@ -131,8 +131,14 @@ export const useDataStore = create(
           api.getFields(), api.getMatches(), api.getPosts(),
         ])
         const update = { dataLoaded: true }
-        if (fieldsR.status === 'fulfilled') update.fields = fieldsR.value
-        else console.warn('getFields failed:', fieldsR.reason?.message)
+        if (fieldsR.status === 'fulfilled') {
+          // Merge: if Supabase field has no holePhotos yet, fall back to seed data photos
+          update.fields = fieldsR.value.map(f => ({
+            ...f,
+            holePhotos: f.holePhotos || FIELDS.find(s => s.name === f.name)?.holePhotos || null,
+            holePars:   f.holePars   || FIELDS.find(s => s.name === f.name)?.holePars   || null,
+          }))
+        } else console.warn('getFields failed:', fieldsR.reason?.message)
         if (matchesR.status === 'fulfilled') update.matches = matchesR.value
         if (postsR.status === 'fulfilled') update.posts = postsR.value
         set(update)
