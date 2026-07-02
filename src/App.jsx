@@ -33,6 +33,20 @@ function AppInit() {
     if (user?.id) loadUserData(user.id)
   }, [user?.id])
 
+  // Golf ball click animation
+  useEffect(() => {
+    const handler = (e) => {
+      const ball = document.createElement('div')
+      ball.className = 'golf-ball-click'
+      ball.style.left = e.clientX + 'px'
+      ball.style.top = e.clientY + 'px'
+      document.body.appendChild(ball)
+      setTimeout(() => ball.remove(), 600)
+    }
+    document.addEventListener('click', handler)
+    return () => document.removeEventListener('click', handler)
+  }, [])
+
   return null
 }
 

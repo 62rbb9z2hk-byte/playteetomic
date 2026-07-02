@@ -226,6 +226,23 @@ export async function saveScorecard(sc) {
   return data
 }
 
+export async function deleteScorecard(id) {
+  const { error } = await supabase.from('scorecards').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function updateScorecard(id, updates) {
+  const { data, error } = await supabase.from('scorecards')
+    .update({
+      scores: (updates.scores || []).map(s => (s === null || s === undefined) ? 0 : Number(s)),
+      gross: updates.gross || 0,
+      stableford: updates.stableford || 0,
+    })
+    .eq('id', id).select().single()
+  if (error) throw error
+  return data
+}
+
 export async function getScorecards(userId) {
   const { data, error } = await supabase.from('scorecards')
     .select('*').eq('user_id', userId).order('created_at', { ascending: false })

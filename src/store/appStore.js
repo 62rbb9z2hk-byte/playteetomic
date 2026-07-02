@@ -258,6 +258,28 @@ export const useDataStore = create(
       isLiked: (postId, userId) => get().likedPosts.includes(`${postId}_${userId}`),
 
       // SCORECARDS
+      deleteScorecard: async (id) => {
+        if (SUPABASE_READY) {
+          try { await api.deleteScorecard(id) } catch (err) {
+            get().toast(err.message, 'error'); return
+          }
+        }
+        set(s => ({ scorecards: s.scorecards.filter(c => c.id !== id) }))
+        get().toast('Scorecard eliminada')
+      },
+
+      updateScorecard: async (id, updates) => {
+        if (SUPABASE_READY) {
+          try {
+            await api.updateScorecard(id, updates)
+          } catch (err) {
+            get().toast(err.message, 'error'); return
+          }
+        }
+        set(s => ({ scorecards: s.scorecards.map(c => c.id === id ? { ...c, ...updates } : c) }))
+        get().toast('Scorecard actualizada')
+      },
+
       saveScorecard: async (data) => {
         if (SUPABASE_READY) {
           try {
