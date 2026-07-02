@@ -22,8 +22,11 @@ function AppInit() {
   const { loadData, loadUserData } = useDataStore()
 
   useEffect(() => {
-    init()
-    loadData()
+    const boot = async () => {
+      await init()     // restore auth session first
+      await loadData() // then fetch fields/posts/matches with valid token
+    }
+    boot()
     subscribeToMatches()
     subscribeToPosts()
     return () => unsubscribeAll()

@@ -127,17 +127,15 @@ export const useDataStore = create(
       // Load all data from Supabase (call on app boot after auth)
       loadData: async () => {
         if (!SUPABASE_READY) return
-        // fields always reloaded fresh (never cached) so hole_photos stays current
-        try {
-          const [fields, matches, posts] = await Promise.all([
-            api.getFields(),
-            api.getMatches(),
-            api.getPosts(),
-          ])
-          set({ fields, matches, posts, dataLoaded: true })
-        } catch (err) {
-          console.warn('Supabase load failed, using seed data:', err.message)
-        }
+        const [fieldsR, matchesR, postsR] = await Promise.allSettled([
+          api.getFields(), api.getMatches(), api.getPosts(),
+        ])
+        const update = { dataLoaded: true }
+        if (fieldsR.status === 'fulfilled') update.fields = fieldsR.value
+        else console.warn('getFields failed:', fieldsR.reason?.message)
+        if (matchesR.status === 'fulfilled') update.matches = matchesR.value
+        if (postsR.status === 'fulfilled') update.posts = postsR.value
+        set(update)
       },
 
       loadUserData: async (userId) => {
@@ -335,6 +333,7 @@ export const useDataStore = create(
     {
       name: 'ptt-data',
       partialize: (s) => ({
+        fields: s.fields,
         matches: s.matches, posts: s.posts,
         scorecards: s.scorecards, likedPosts: s.likedPosts,
       }),
